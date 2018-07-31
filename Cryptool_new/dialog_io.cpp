@@ -2,8 +2,6 @@
 #include <thread>
 #include <string.h>
 
-//std::mutex mu;
-
 INT_PTR CALLBACK dialog::StaticDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	dialog* self = NULL;
@@ -77,7 +75,7 @@ void main_dialog::fill_tab(HWND htab)
 	ti.mask = TCIF_TEXT;
 	for (uint32_t i = 0; i < algorithms.size(); i++)
 	{
-		ti.pszText = (LPWSTR)algorithms[i].c_str();
+		ti.pszText = (LPWSTR)algorithms[i].first.c_str();
 		TabCtrl_InsertItem(htab, i, &ti);
 	}
 }
@@ -85,13 +83,12 @@ void main_dialog::fill_tab(HWND htab)
 // algorithm name should be upper case
 void main_dialog::set_widget_value()
 {
-	algorithms.emplace_back(L"MD5");
-	algorithms.emplace_back(L"SHA1");
-	algorithms.emplace_back(L"SHA256");
-	algorithms.emplace_back(L"SM3");
-	algorithms.emplace_back(L"RC4");
-	algorithms.emplace_back(L"DES");
-	algorithms.emplace_back(L"AES");
+	algorithms.emplace_back(std::make_pair(L"MD5", true));
+	algorithms.emplace_back(std::make_pair(L"SHA1", true));
+	algorithms.emplace_back(std::make_pair(L"SHA256", true));
+	algorithms.emplace_back(std::make_pair(L"SM3", true));
+	algorithms.emplace_back(std::make_pair(L"DES", false));
+	algorithms.emplace_back(std::make_pair(L"AES", false));
 
 	filefilters.emplace_back(L"all(*.*)\0*.*\0\0");
 }
@@ -136,7 +133,7 @@ INT_PTR main_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 			if (((LPNMHDR)lParam)->code == TCN_SELCHANGE)
 			{
 				tab_id = TabCtrl_GetCurSel(GetDlgItem(hDlg, IDC_TAB1));
-				SetDlgItemTextW(hDlg, IDC_STATIC1, (LPWSTR)algorithms[tab_id].c_str());
+				SetDlgItemTextW(hDlg, IDC_STATIC1, (LPWSTR)algorithms[tab_id].first.c_str());
 			}
 		}
 		break;
@@ -414,7 +411,9 @@ void main_dialog::process_file(crypto *c, file_context *f_ctx)
 	uint8_t *output = new uint8_t[chunk_size];
 
 	bool eof;
-	bool write = !c->is_hash() && f_ctx->is_file;
+
+	// oFile != NULL means (!hash && file)
+	bool write = f_ctx->oFile != NULL;
 	DWORD read, written;
 
 	// output_size of one chunk
@@ -431,6 +430,7 @@ void main_dialog::process_file(crypto *c, file_context *f_ctx)
 			processed_size_low += read;
 			processed_size_high++;
 		}
+		// reach end of file
 		if (processed_size_high == size_high && processed_size_low == size_low)
 			eof = true;
 
@@ -464,12 +464,12 @@ uint32_t main_dialog::process_text(crypto *c, uint8_t *output)
 	return output_size;
 }
 
-void main_dialog::display(crypto *c, uint8_t *output, uint32_t output_size)
+void main_dialog::display(crypto *c, uint8_t *output, uint32_t output_size, bool is_hash)
 {
 	uint8_t *hex = NULL;
 
 	// hash algorithm has method "encode" to produce hex string from state
-	if (c->is_hash())
+	if (is_hash)
 	{
 		hex = c->encode();
 		SetDlgItemTextA(hDlg, IDC_EDIT3, LPCSTR(hex));
@@ -523,7 +523,7 @@ void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx)
 		// result of process_text
 		LPSTR output = new char[1024 + 256];
 		memset(output, 0, sizeof(char) * (1024 + 256));
-		uint32_t output_size;
+		uint32_t output_size = 0;
 
 		if (f_ctx->is_file)
 			process_file(c, f_ctx);
@@ -535,7 +535,7 @@ void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx)
 
 		// display output in main_dialog
 		if (c_ctx->is_hash || !f_ctx->is_file)
-			display(c, (uint8_t*)output, output_size);
+			display(c, (uint8_t*)output, output_size, c_ctx->is_hash);
 
 		delete c_ctx;
 		delete f_ctx;
@@ -552,8 +552,11 @@ void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx)
 void main_dialog::io_main()
 {
 	// prepare crypto_context
-	std::wstring algorithm = algorithms[TabCtrl_GetCurSel(GetDlgItem(hDlg, IDC_TAB1))];
+	int tab_id = TabCtrl_GetCurSel(GetDlgItem(hDlg, IDC_TAB1));
+	std::wstring algorithm = algorithms[tab_id].first;
+	bool is_hash = algorithms[tab_id].second;
 	bool is_enc = IsDlgButtonChecked(hDlg, IDC_RADIO3) == BST_CHECKED;
+
 	uint32_t mode;
 	if (IsDlgButtonChecked(hDlg, IDC_RADIO5) == BST_CHECKED)
 		mode = 0;
@@ -563,7 +566,7 @@ void main_dialog::io_main()
 		mode = 2;
 	else
 		mode = 3;
-	crypto_context *c_ctx = new crypto_context(algorithm, mode, is_enc);
+	crypto_context *c_ctx = new crypto_context(algorithm, mode, is_hash, is_enc);
 
 	if (!c_ctx->is_hash)
 	{

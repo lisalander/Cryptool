@@ -1,14 +1,13 @@
 #pragma once
 #include <windows.h>
 #include <map>
-#include <utility>
 #include <algorithm>
 
 typedef struct crypto_context
 {
 	// constructor
 	crypto_context() {}
-	crypto_context(std::wstring s, uint32_t m, bool b);
+	crypto_context(std::wstring s, uint32_t m, bool h, bool b);
 
 	// algorithm name
 	std::wstring algorithm;
@@ -46,20 +45,16 @@ public:
 	crypto() {}
 	virtual ~crypto() {}
 
+	// input size is 64bit
 	void set_input_size(uint32_t high, uint32_t low);
 
 	//
 	void copy_context(const crypto_context *ctx);
 
-	// should be removed...
-	bool is_hash();
-
+	// only for hash algorithm, convert state to hex
 	virtual uint8_t* encode() { return NULL; }
 
-	/* 
-	    set encryption key, decryption key and initial vector
-		do nothing if it's hash algorithm
-	*/
+	// set initial state, encryption key, decryption key and initial vector
 	virtual int32_t init() { return 0; };
 
 	/*
@@ -138,14 +133,14 @@ public:
 
 /*
    register algorithm:
-   REGISTER_CRYPTO(NAME)
-   NAME is name of algorithm class, it's lower case
+   REGISTER_CRYPTO(name)
+   name is name of algorithm class, it's lower case
 */
 #define REGISTER_CRYPTO(name) static crypto_factory_impl<name> crypto_factory_##name(L#name);
 
 /*
    create algorithm object:
-   CREATE_CRYPTO(NAME)
+   CREATE_CRYPTO(name)
 */
 #define CREATE_CRYPTO(name) crypto_factory::instance().create(name)
 

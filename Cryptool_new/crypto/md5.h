@@ -34,6 +34,10 @@ public:
 	md5();
 	virtual ~md5() {}
 
+	const bool is_hash = true;
+
+	virtual int32_t init();
+
 	/*
 	state(little endian) to hex string
 	maybe it shoule be implemented elsewhere

@@ -7,7 +7,7 @@ aes::aes()
 
 int32_t aes::init()
 {
-	int32_t status;
+    int32_t status;
 	if (c_ctx.is_enc)
 	{
 		status = set_enc_key(c_ctx.user_key, c_ctx.key_length);
@@ -48,6 +48,7 @@ int32_t aes::init()
 		//case 3: func = &ofb_encrypt; break;
 		}
 	}
+	c_ctx.is_hash = is_hash;
 	return status;
 }
 

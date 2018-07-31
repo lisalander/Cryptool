@@ -19,6 +19,8 @@ public:
 	aes();
 	virtual ~aes() {}
 
+	const bool is_hash = false;
+
 	virtual int32_t init();
 
 	virtual void update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);

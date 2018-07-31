@@ -5,13 +5,14 @@
 #include <winuser.h>
 #include "resource.h"
 #include <string>
+#include <map>
 #include <vector>
 #include <functional>
 #include "crypto\crypto.h"
 
 typedef struct file_context
 {
-	TCHAR iFilePath[MAX_PATH];
+    TCHAR iFilePath[MAX_PATH];
 	TCHAR oFilePath[MAX_PATH];
 	HANDLE iFile = NULL;
 	HANDLE oFile = NULL;
@@ -37,16 +38,6 @@ protected:
 
 	virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
 };
-
-
-
-
-
-
-
-
-
-
 
 class main_dialog : public dialog
 {
@@ -87,7 +78,9 @@ public:
 	// 
 	void start(HWND parent);
 protected:
-	std::vector<std::wstring> algorithms;
+	// (algorithm, is_hash)
+	std::vector<std::pair<std::wstring, bool>> algorithms;
+
 	std::vector<std::wstring> filefilters;
 private:
 	/* basic */
@@ -110,7 +103,7 @@ private:
 	void run(crypto_context *c_ctx, file_context *f_ctx);
 	std::function<void(crypto_context*, file_context*)> t_run;
 
-	void display(crypto *c, uint8_t *output, uint32_t output_size);
+	void display(crypto *c, uint8_t *output, uint32_t output_size, bool is_hash);
 
 	uint32_t process_text(crypto *c, uint8_t *output);
 

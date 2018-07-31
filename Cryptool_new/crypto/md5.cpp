@@ -2,10 +2,17 @@
 
 md5::md5()
 {
+
+}
+
+int32_t md5::init()
+{
 	state[0] = 0x67452301;
 	state[1] = 0xefcdab89;
 	state[2] = 0x98badcfe;
 	state[3] = 0x10325476;
+	c_ctx.is_hash = is_hash;
+	return 0;
 }
 
 void md5::decode(uint32_t output[], const uint8_t input[], uint32_t length)
@@ -136,9 +143,6 @@ void md5::transform(const uint8_t input[])
 	state[1] += B;
 	state[2] += C;
 	state[3] += D;
-
-	// Zeroize sensitive information.
-	//memset(X, 0, sizeof(X));
 }
 
 /*
@@ -146,7 +150,7 @@ void md5::transform(const uint8_t input[])
   copy input to buffer
   transform buffer
 
-  output, output_size and enc is ignored
+  output, output_size is ignored
 */
 void md5::update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
 {
