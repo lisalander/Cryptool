@@ -48,7 +48,6 @@ int32_t aes::init()
 		//case 3: func = &ofb_encrypt; break;
 		}
 	}
-	c_ctx.is_hash = is_hash;
 	return status;
 }
 
