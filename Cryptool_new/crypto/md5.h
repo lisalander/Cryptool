@@ -34,6 +34,7 @@ public:
 	md5();
 	virtual ~md5() {}
 
+	// init state
 	virtual int32_t init();
 
 	/*
