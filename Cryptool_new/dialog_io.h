@@ -12,6 +12,7 @@
 
 typedef struct file_context
 {
+	// i:input o:output
     TCHAR iFilePath[MAX_PATH];
 	TCHAR oFilePath[MAX_PATH];
 	HANDLE iFile = NULL;
@@ -67,6 +68,7 @@ public:
 	uint8_t* convert_4_8(const uint8_t *input, uint32_t length);
 
 	uint8_t* precheck_hex_input(uint8_t *input, uint32_t length);
+
 	/* 
 	   user key and initial vector are hex string
 	   check user key/initial vector is legal or not
@@ -105,9 +107,9 @@ private:
 
 	void display(crypto *c, uint8_t *output, uint32_t output_size, bool is_hash);
 
-	uint32_t process_text(crypto *c, uint8_t *output);
+	int32_t process_text(crypto *c, uint8_t *output, uint32_t *output_size);
 
-	void process_file(crypto *c, file_context *f_ctx);
+	int32_t process_file(crypto *c, file_context *f_ctx);
 
 	bool check_file(bool hash, file_context *f_ctx);
 };

@@ -43,7 +43,7 @@ public:
 	*/
 	virtual uint8_t* encode();
 
-	virtual void update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
+	virtual int32_t update(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
 private:
 	uint32_t state[4];
 	uint32_t X[16];

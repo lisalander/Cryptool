@@ -8,7 +8,7 @@ aes::aes()
 int32_t aes::init()
 {
     int32_t status;
-	if (c_ctx.is_enc)
+	if (c_ctx.is_enc || c_ctx.mode >= 2)
 	{
 		status = set_enc_key(c_ctx.user_key, c_ctx.key_length);
 	}
@@ -34,8 +34,8 @@ int32_t aes::init()
 		{
 		case 0: func = &aes::ecb_encrypt; break;
 		case 1: func = &aes::cbc_encrypt; break;
-		//case 2: func = &cfb_encrypt; break;
-		//case 3: func = &ofb_encrypt; break;
+		case 2: func = &aes::cfb_encrypt; break;
+		case 3: func = &aes::ofb_encrypt; break;
 		}
 	}
 	else
@@ -44,8 +44,8 @@ int32_t aes::init()
 		{
 		case 0: func = &aes::ecb_decrypt; break;
 		case 1: func = &aes::cbc_decrypt; break;
-		//case 2: func = &cfb_encrypt; break;
-		//case 3: func = &ofb_encrypt; break;
+		case 2: func = &aes::cfb_decrypt; break;
+		case 3: func = &aes::ofb_decrypt; break;
 		}
 	}
 	return status;
@@ -58,7 +58,6 @@ int32_t aes::set_initial_vector(uint8_t *ivec, uint32_t length)
 
 	// aes initial vector is uint8_t array, no converion needed
 	iv = ivec;
-	memcpy(buffer, iv, block_size);
 
 	return 0;
 }
@@ -459,11 +458,57 @@ void aes::decrypt(uint8_t *output, const uint8_t *input)
 	PUTU32(output + 12, s3);
 }
 
-void aes::cbc_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
+void aes::ecb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
+{
+	uint32_t i;
+	uint32_t L = length / block_size;
+    *output_size = L * block_size;
+
+	for (i = 0; i < L; i++)
+	{
+		encrypt(output, input);
+		output += block_size;
+		input += block_size;
+	}
+
+	if (last)
+	{
+		length = length % block_size;
+		memcpy(buffer, input, length);
+		memset(buffer + length, block_size - length, block_size - length);
+		encrypt(output, buffer);
+		*output_size += block_size;
+	}
+}
+
+void aes::ecb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
+{
+	uint32_t i;
+	uint32_t L = length / block_size;
+	*output_size = L * block_size;
+
+	for (i = 0; i < L; i++)
+	{
+		decrypt(output, input);
+		output += block_size;
+		input += block_size;
+	}
+
+	if (last)
+	{
+		// remove padding
+		*output_size -= (uint32_t)*(output - 1);
+	}
+}
+
+void aes::cbc_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
 {
 	uint32_t i, j;
 	uint32_t L = length / block_size;
 	*output_size = L * block_size;
+
+	// copy iv to buffer
+	memcpy(buffer, iv, block_size);
 
 	for (i = 0; i < L; i++)
 	{
@@ -487,11 +532,14 @@ void aes::cbc_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, DW
 	}
 }
 
-void aes::cbc_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
+void aes::cbc_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
 {
 	uint32_t i, j;
 	uint32_t L = length / block_size;
 	*output_size = L * block_size;
+
+	// copy iv to buffer
+	memcpy(buffer, iv, block_size);
 
 	for (i = 0; i < L; i++)
 	{
@@ -510,38 +558,54 @@ void aes::cbc_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, DW
 	}
 }
 
-void aes::ecb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
+void aes::cfb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
 {
-	uint32_t i;
+	uint32_t i, j;
 	uint32_t L = length / block_size;
-    *output_size = L * block_size;
+	*output_size = L * block_size;
+
+	// copy iv to buffer
+	memcpy(buffer, iv, block_size);
 
 	for (i = 0; i < L; i++)
 	{
-		encrypt(output, input);
+		encrypt(output, buffer);
+		for (j = 0; j < block_size; j++)
+			output[j] ^= input[j];
+		
+		memcpy(buffer, output, block_size);
 		output += block_size;
 		input += block_size;
 	}
 
 	if (last)
 	{
-		length = length % block_size;
-		memcpy(buffer, input, length);
-		memset(buffer + length, block_size - length, block_size - length);
 		encrypt(output, buffer);
+		length = length % block_size;
+		for (j = 0; j < length; j++)
+			output[j] ^= input[j];
+		for (j = length; j < block_size; j++)
+			output[j] ^= (uint8_t)(block_size - length);
+		
 		*output_size += block_size;
 	}
 }
 
-void aes::ecb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
+void aes::cfb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
 {
-	uint32_t i;
+	uint32_t i, j;
 	uint32_t L = length / block_size;
 	*output_size = L * block_size;
 
+	// copy iv to buffer
+	memcpy(buffer, iv, block_size);
+
 	for (i = 0; i < L; i++)
 	{
-		decrypt(output, input);
+		encrypt(output, buffer);
+		for (j = 0; j < block_size; j++)
+			output[j] ^= input[j];
+		memcpy(buffer, input, block_size);
 		output += block_size;
 		input += block_size;
 	}
@@ -553,12 +617,72 @@ void aes::ecb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, DW
 	}
 }
 
-void aes::update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
+void aes::ofb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
+{
+	uint32_t i, j;
+	uint32_t L = length / block_size;
+	*output_size = L * block_size;
+
+	// copy iv to buffer
+	memcpy(buffer, iv, block_size);
+
+	for (i = 0; i < L; i++)
+	{
+		encrypt(output, buffer);
+		memcpy(buffer, output, block_size);
+		for (j = 0; j < block_size; j++)
+			output[j] ^= input[j];
+		output += block_size;
+		input += block_size;
+	}
+
+	if (last)
+	{
+		encrypt(output, buffer);
+		length = length % block_size;
+		for (j = 0; j < length; j++)
+			output[j] ^= input[j];
+		for (j = length; j < block_size; j++)
+			output[j] ^= (uint8_t)(block_size - length);
+
+		*output_size += block_size;
+	}
+}
+
+void aes::ofb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
+{
+	uint32_t i, j;
+	uint32_t L = length / block_size;
+	*output_size = L * block_size;
+
+	// copy iv to buffer
+	memcpy(buffer, iv, block_size);
+
+	for (i = 0; i < L; i++)
+	{
+		encrypt(output, buffer);
+		memcpy(buffer, output, block_size);
+		for (j = 0; j < block_size; j++)
+			output[j] ^= input[j];
+		output += block_size;
+		input += block_size;
+	}
+
+	if (last)
+	{
+		// remove padding
+		*output_size -= (uint32_t)*(output - 1);
+	}
+}
+
+int32_t aes::update(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
 {
 	// for decryption, length shoule be multiple of block size
 	if (c_ctx.is_enc == false && length%block_size != 0)
-		return;
+		return -1;
+
 	(this->*func)(output, input, length, output_size, last);
+	return 0;
 }
 
 const uint32_t aes::Te0[256] = {

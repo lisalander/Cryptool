@@ -43,7 +43,7 @@ uint8_t* md5::encode()
 	}
 
 	// now output is just number(0 ~ 15)
-	// turn it into hex string('0' ~ 'F')
+	// turn it into character('0' ~ 'F')
 	for (uint32_t i = 0; i < length * 8; i++)
 	{
 		if (output[i] < 0xA)
@@ -151,7 +151,7 @@ void md5::transform(const uint8_t input[])
 
   output, output_size is ignored
 */
-void md5::update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last)
+int32_t md5::update(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)
 {
 	uint32_t i;
 	uint32_t L = length / block_size;
@@ -167,6 +167,7 @@ void md5::update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *
 		length = length % block_size;
 		finalize(input, length);
 	}
+	return 0;
 }
 
 void md5::finalize(const uint8_t input[], uint32_t length)

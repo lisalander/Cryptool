@@ -143,6 +143,12 @@ INT_PTR main_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 		case IDC_BUTTON1:
 			io_main();
 			break;
+		case IDC_BUTTON2:
+			choose_open_file();
+			break;
+		case IDC_BUTTON3:
+			choose_save_file();
+			break;
 		case IDC_RADIO1:
 			CheckRadioButton(hDlg, IDC_RADIO1, IDC_RADIO2, IDC_RADIO1);
 			break;
@@ -317,20 +323,34 @@ int main_dialog::dropfile(HDROP hDrop)
 	ScreenToClient(hDlg, &point);
 	h = ChildWindowFromPoint(hDlg, point); //get widget handle
 
-	WCHAR FileName[MAX_PATH];
-	DragQueryFileW(hDrop, 0, FileName, MAX_PATH); //get file name  
+	WCHAR FilePath[MAX_PATH];
+	DragQueryFileW(hDrop, 0, FilePath, MAX_PATH); //get file name  
 
 	h1 = GetDlgItem(hDlg, IDC_STATIC2);
 	if (h == h1)
 	{
-		SetDlgItemTextW(hDlg, IDC_STATIC2, FileName);
+		SetDlgItemTextW(hDlg, IDC_STATIC2, FilePath);
 		DragFinish(hDrop);
 		return 0;
 	}
 	h1 = GetDlgItem(hDlg, IDC_STATIC3);
 	if (h == h1)
 	{
-		SetDlgItemTextW(hDlg, IDC_STATIC3, FileName);
+
+		HANDLE oFile = CreateFileW(FilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL, NULL);
+		if (oFile != INVALID_HANDLE_VALUE) //file exists
+		{
+			int z = MessageBoxW(NULL, L"file exists, overwrite?", NULL, MB_YESNO);
+			if (z == IDYES)
+			{
+				SetDlgItemTextW(hDlg, IDC_STATIC3, FilePath);
+			}
+		}
+		else
+		{
+			SetDlgItemTextW(hDlg, IDC_STATIC3, FilePath);
+		}
 		DragFinish(hDrop);
 		return 0;
 	}
@@ -349,8 +369,8 @@ bool main_dialog::check_file(bool hash, file_context *f_ctx)
 				FILE_ATTRIBUTE_NORMAL, NULL);
 
 			/*
-			hash algorithm's output is shown on main_dialog
-			so it does not need to output to file
+			   hash algorithm's output is shown on main_dialog
+			   so it does not need to output to file
 			*/
 			if (!hash)
 			{
@@ -362,7 +382,7 @@ bool main_dialog::check_file(bool hash, file_context *f_ctx)
 				}
 				else
 				{
-					MessageBoxW(NULL, L"no save path", NULL, MB_OK);
+					MessageBoxW(NULL, L"no save path", L"error", MB_OK);
 					CloseHandle(f_ctx->oFile);
 					return false;
 				}
@@ -370,17 +390,17 @@ bool main_dialog::check_file(bool hash, file_context *f_ctx)
 		}
 		else
 		{
-			MessageBoxW(NULL, L"no input file", NULL, MB_OK);
+			MessageBoxW(NULL, L"no input file", L"error", MB_OK);
 			return false;
 		}
 
 		if (f_ctx->iFile == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxW(NULL, L"fail to open file", NULL, MB_OK);
+			MessageBoxW(NULL, L"fail to open file", L"error", MB_OK);
 			CloseHandle(f_ctx->iFile);
 			if (f_ctx->oFile == INVALID_HANDLE_VALUE && !hash)
 			{
-				MessageBoxW(NULL, L"fail to create file", NULL, MB_OK);
+				MessageBoxW(NULL, L"fail to create file", L"error", MB_OK);
 				CloseHandle(f_ctx->oFile);
 			}
 			return false;
@@ -389,8 +409,10 @@ bool main_dialog::check_file(bool hash, file_context *f_ctx)
 	return true;
 }
 
-void main_dialog::process_file(crypto *c, file_context *f_ctx)
+int32_t main_dialog::process_file(crypto *c, file_context *f_ctx)
 {
+	int32_t status;
+
 	// set file size
 	DWORD size_high;
 	DWORD size_low = GetFileSize(f_ctx->iFile, &size_high);
@@ -417,7 +439,7 @@ void main_dialog::process_file(crypto *c, file_context *f_ctx)
 	DWORD read, written;
 
 	// output_size of one chunk
-	DWORD output_size;
+	uint32_t output_size;
 
 	while (true)
 	{
@@ -434,7 +456,15 @@ void main_dialog::process_file(crypto *c, file_context *f_ctx)
 		if (processed_size_high == size_high && processed_size_low == size_low)
 			eof = true;
 
-		c->update(output, buffer, read, &output_size, eof);
+		status = c->update(output, buffer, read, &output_size, eof);
+		if (status < 0)
+		{
+			delete[]output;
+			delete[]buffer;
+			CloseHandle(f_ctx->iFile);
+			CloseHandle(f_ctx->oFile);
+			return status;
+		}
 		if (write)
 			WriteFile(f_ctx->oFile, output, output_size, &written, NULL);
 		if (eof)
@@ -444,10 +474,12 @@ void main_dialog::process_file(crypto *c, file_context *f_ctx)
 	delete[]buffer;
 	CloseHandle(f_ctx->iFile);
 	CloseHandle(f_ctx->oFile);
+	return 0;
 }
 
-uint32_t main_dialog::process_text(crypto *c, uint8_t *output)
+int32_t main_dialog::process_text(crypto *c, uint8_t *output, uint32_t *output_size)
 {
+	int32_t status;
 	uint32_t length;
 	LPSTR input = new char[1024];
 	memset(input, 0, sizeof(char) * 1024);
@@ -457,11 +489,10 @@ uint32_t main_dialog::process_text(crypto *c, uint8_t *output)
 	c->set_input_size(0, length);
 
 	// length < 4M, so it's the last chunk
-	DWORD output_size;
-	c->update((uint8_t*)output, (uint8_t*)input, length, &output_size, true);
+	status = c->update((uint8_t*)output, (uint8_t*)input, length, output_size, true);
 
 	delete[]input;
-	return output_size;
+	return status;
 }
 
 void main_dialog::display(crypto *c, uint8_t *output, uint32_t output_size, bool is_hash)
@@ -486,9 +517,10 @@ void main_dialog::display(crypto *c, uint8_t *output, uint32_t output_size, bool
 	}
 }
 
-// temporary implementation, need improvement
 void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx)
 {
+	int32_t status;
+
 	// output of block cipher from process_text()
 	uint8_t *output = NULL;
 
@@ -523,19 +555,29 @@ void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx)
 		// result of process_text
 		LPSTR output = new char[1024 + 256];
 		memset(output, 0, sizeof(char) * (1024 + 256));
-		uint32_t output_size = 0;
+		uint32_t output_size;
 
 		if (f_ctx->is_file)
-			process_file(c, f_ctx);
+			status = process_file(c, f_ctx);
 		else
 		{
-			// ciphertext may contain '\0', so i need to know output size
-			output_size = process_text(c, (uint8_t*)output);
+			// output may contain '\0', so i need to know output size
+			status = process_text(c, (uint8_t*)output, &output_size);
 		}
 
-		// display output in main_dialog
-		if (c_ctx->is_hash || !f_ctx->is_file)
-			display(c, (uint8_t*)output, output_size, c_ctx->is_hash);
+		if (status == 0)
+		{
+			// display output in main_dialog
+			if (c_ctx->is_hash || !f_ctx->is_file)
+				display(c, (uint8_t*)output, output_size, c_ctx->is_hash);
+
+			if (f_ctx->is_file)
+			    MessageBoxW(NULL, L"OK", L" ^_^ ", MB_OK);
+		}
+		else
+		{
+			MessageBoxW(NULL, L"error", L"?", MB_OK);
+		}
 
 		delete c_ctx;
 		delete f_ctx;
@@ -543,7 +585,7 @@ void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx)
 	}
 	else
 	{
-		MessageBoxW(NULL, L"NOT YET", L"NO IMPLEMENTATION", MB_OK);
+		MessageBoxW(NULL, L"NO IMPLEMENTATION", L"?_?", MB_OK);
 		delete c_ctx;
 		delete f_ctx;
 	}

@@ -21,7 +21,7 @@ public:
 
 	virtual int32_t init();
 
-	virtual void update(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
+	virtual int32_t update(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
 private:
 	uint8_t buffer[16];
 
@@ -60,7 +60,7 @@ private:
 	int32_t set_initial_vector(uint8_t *ivec, uint32_t length);
 
 	// which function to use in update, it depends on mode
-	void (aes::*func)(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
+	void (aes::*func)(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
 
 	// encryption
 	void encrypt(uint8_t *output, const uint8_t *input);
@@ -69,11 +69,19 @@ private:
 	void decrypt(uint8_t *output, const uint8_t *input);
 
 	// ecb
-	void ecb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
-	void ecb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
+	void ecb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
+	void ecb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
 
 	// cbc
-	void cbc_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
-	void cbc_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, DWORD *output_size, bool last);
+	void cbc_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
+	void cbc_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
+
+	// cfb
+	void cfb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
+	void cfb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
+
+	// cfb
+	void ofb_encrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
+	void ofb_decrypt(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
 };
 
