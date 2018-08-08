@@ -18,9 +18,6 @@
     <ClCompile Include="Cryptool_new.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="dialog_io.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="crypto\aes.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -30,12 +27,21 @@
     <ClCompile Include="crypto\md5.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="dialog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="progress_dialog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="main_dialog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\sha1.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cryptool_new.h">
-      <Filter>源文件</Filter>
-    </ClInclude>
-    <ClInclude Include="dialog_io.h">
       <Filter>源文件</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
@@ -48,6 +54,18 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="crypto\md5.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="dialog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="progress_dialog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="main_dialog.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\sha1.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

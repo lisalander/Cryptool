@@ -1,4 +1,4 @@
 #pragma once
-#include "dialog_io.h"
+#include "main_dialog.h"
 #include <tchar.h>
 #include <thread>

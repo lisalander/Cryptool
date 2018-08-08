@@ -1,5 +1,32 @@
 #include "md5.h"
 
+#define F(b,c,d)        (((c ^ d) & b) ^ d)
+#define G(b,c,d)        (((b ^ c) & d) ^ c)
+#define H(b,c,d)        (b ^ c ^ d)
+#define I(b,c,d)        ((~d | b) ^ c)
+
+#define ROTATELEFT(a, n) ((a << n) | (a >> (32-n)))
+
+#define R0(a,b,c,d,k,s,t) { \
+        a+=(k+t+F(b,c,d)); \
+        a=ROTATELEFT(a,s); \
+        a+=b; };\
+
+#define R1(a,b,c,d,k,s,t) { \
+        a+=(k+t+G(b,c,d)); \
+        a=ROTATELEFT(a,s); \
+        a+=b; };
+
+#define R2(a,b,c,d,k,s,t) { \
+        a+=(k+t+H(b,c,d)); \
+        a=ROTATELEFT(a,s); \
+        a+=b; };
+
+#define R3(a,b,c,d,k,s,t) { \
+        a+=(k+t+I(b,c,d)); \
+        a=ROTATELEFT(a,s); \
+        a+=b; };
+
 md5::md5()
 {
 
@@ -7,18 +34,19 @@ md5::md5()
 
 int32_t md5::init()
 {
-	state[0] = 0x67452301;
-	state[1] = 0xefcdab89;
-	state[2] = 0x98badcfe;
-	state[3] = 0x10325476;
+	state[0] = 0x67452301U;
+	state[1] = 0xefcdab89U;
+	state[2] = 0x98badcfeU;
+	state[3] = 0x10325476U;
 	return 0;
 }
 
-void md5::decode(uint32_t output[], const uint8_t input[], uint32_t length)
+void md5::decode(uint32_t output[], const uint8_t input[])
 {
-	for (uint32_t i = 0, j = 0; j < length; i++, j += 4)
+	for (uint32_t i = 0, j = 0; j < 64; i++, j += 4)
 	{
-		output[i] = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
+		//output[i] = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
+		output[i] = *(uint32_t*)(input + j);
 	}
 }
 
@@ -64,7 +92,7 @@ void md5::transform(const uint8_t input[])
 	uint32_t B = state[1];
 	uint32_t C = state[2];
 	uint32_t D = state[3];
-	decode(X, input, 64);
+	decode(X, input);
 
 	/* Round 1 */
 	R0(A, B, C, D, X[0], 7, 0xd76aa478L);

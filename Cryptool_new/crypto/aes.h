@@ -2,7 +2,7 @@
 #include "crypto.h"
 
 /*
-    lisence
+lisence
 
 */
 

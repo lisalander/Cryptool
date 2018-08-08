@@ -2,6 +2,7 @@
 #include <mutex>
 #include "crypto.h"
 #include "md5.h"
+#include "sha1.h"
 #include "aes.h"
 
 crypto* crypto_factory::create(const std::wstring& name)
@@ -12,10 +13,13 @@ crypto* crypto_factory::create(const std::wstring& name)
 	return it->second->create();
 }
 
-crypto_context::crypto_context(std::wstring name, uint32_t m, bool h, bool b)
+crypto_context::crypto_context(std::wstring name, int32_t m, bool h, bool b)
 {
 	algorithm = name;
-	mode = m;
+	if (h)
+	    mode = -1;
+	else
+		mode = m;
 	is_hash = h;
 	is_enc = b;
 }
@@ -28,6 +32,7 @@ void crypto::set_input_size(uint32_t high, uint32_t low)
 
 void crypto::copy_context(const crypto_context *ctx)
 {
+	algorithm = ctx->algorithm;
 	c_ctx.algorithm = ctx->algorithm;
 	c_ctx.is_enc = ctx->is_enc;
 	c_ctx.is_hash = ctx->is_hash;
@@ -39,6 +44,7 @@ void crypto::copy_context(const crypto_context *ctx)
 }
 
 REGISTER_CRYPTO(md5);
+REGISTER_CRYPTO(sha1);
 REGISTER_CRYPTO(aes);
 
 

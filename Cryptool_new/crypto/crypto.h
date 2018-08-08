@@ -1,5 +1,5 @@
 #pragma once
-#include <windows.h>
+#include <ctype.h>
 #include <map>
 #include <algorithm>
 
@@ -7,7 +7,7 @@ typedef struct crypto_context
 {
 	// constructor
 	crypto_context() {}
-	crypto_context(std::wstring s, uint32_t m, bool h, bool b);
+	crypto_context(std::wstring s, int32_t m, bool h, bool b);
 
 	// algorithm name
 	std::wstring algorithm;
@@ -19,7 +19,7 @@ typedef struct crypto_context
 	   2 : cfb
 	   3 : ofb
 	*/
-	uint32_t mode;
+	int32_t mode;
 
 	// input key and key length
 	uint8_t *user_key = NULL;
@@ -44,6 +44,9 @@ class crypto
 public:
 	crypto() {}
 	virtual ~crypto() {}
+
+	// algorithm name
+	std::wstring algorithm;
 
 	// input size is 64bit
 	void set_input_size(uint32_t high, uint32_t low);

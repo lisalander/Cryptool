@@ -23,14 +23,20 @@
     <ClCompile Include="crypto\aes.cpp" />
     <ClCompile Include="crypto\crypto.cpp" />
     <ClCompile Include="crypto\md5.cpp" />
-    <ClCompile Include="dialog_io.cpp" />
+    <ClCompile Include="crypto\sha1.cpp" />
+    <ClCompile Include="dialog.cpp" />
+    <ClCompile Include="main_dialog.cpp" />
+    <ClCompile Include="progress_dialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cryptool_new.h" />
     <ClInclude Include="crypto\aes.h" />
     <ClInclude Include="crypto\crypto.h" />
     <ClInclude Include="crypto\md5.h" />
-    <ClInclude Include="dialog_io.h" />
+    <ClInclude Include="crypto\sha1.h" />
+    <ClInclude Include="dialog.h" />
+    <ClInclude Include="main_dialog.h" />
+    <ClInclude Include="progress_dialog.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
