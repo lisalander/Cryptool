@@ -39,6 +39,9 @@
     <ClCompile Include="crypto\sha1.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="process.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cryptool_new.h">
@@ -66,6 +69,9 @@
       <Filter>源文件</Filter>
     </ClInclude>
     <ClInclude Include="crypto\sha1.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="process.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

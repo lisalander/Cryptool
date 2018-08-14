@@ -11,8 +11,8 @@ public:
 	virtual int32_t init();
 
 	/*
-	state(little endian) to hex string
-	maybe it shoule be implemented elsewhere
+	   state(little endian) to hex string
+	   maybe it shoule be implemented elsewhere
 	*/
 	virtual uint8_t* encode();
 

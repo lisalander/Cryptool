@@ -27,12 +27,11 @@ INT_PTR CALLBACK dialog::StaticDialogProc(HWND hDlg, UINT message, WPARAM wParam
 void dialog::dlgmsgloop()
 {
 	MSG msg;
-	HWND H = hDlg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
 		if (msg.message > WM_USER && msg.message < WM_USER + 5)
 			msg.hwnd = hDlg;
-		if (!IsDialogMessage(hDlg, &msg))
+		if (true)//IsDialogMessage(hDlg, &msg)
 		{
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);

@@ -26,6 +26,7 @@
     <ClCompile Include="crypto\sha1.cpp" />
     <ClCompile Include="dialog.cpp" />
     <ClCompile Include="main_dialog.cpp" />
+    <ClCompile Include="process.cpp" />
     <ClCompile Include="progress_dialog.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -36,6 +37,7 @@
     <ClInclude Include="crypto\sha1.h" />
     <ClInclude Include="dialog.h" />
     <ClInclude Include="main_dialog.h" />
+    <ClInclude Include="process.h" />
     <ClInclude Include="progress_dialog.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
@@ -143,12 +145,15 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

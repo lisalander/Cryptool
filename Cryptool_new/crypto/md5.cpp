@@ -170,6 +170,8 @@ void md5::transform(const uint8_t input[])
 	state[1] += B;
 	state[2] += C;
 	state[3] += D;
+
+	A = B = C = D = 0;
 }
 
 /*

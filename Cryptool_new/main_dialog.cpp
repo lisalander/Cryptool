@@ -1,9 +1,7 @@
 #include "main_dialog.h"
 #include "progress_dialog.h"
 #include <thread>
-#include <string.h>
-#include <timeapi.h>
-#pragma comment(lib,"winmm.lib")
+//#include <string.h>
 
 main_dialog::main_dialog()
 {
@@ -32,8 +30,7 @@ void main_dialog::init()
 	// ecb
 	CheckRadioButton(hDlg, IDC_RADIO5, IDC_RADIO8, IDC_RADIO5);
 
-	//
-	t_run = std::bind(&main_dialog::run, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	m_tid = GetCurrentThreadId();
 }
 
 void main_dialog::fill_tab(HWND htab)
@@ -67,6 +64,10 @@ INT_PTR main_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_INITDIALOG:
 		init();
+		break;
+	case WM_FINISH:
+		// show result in dialog
+		display(LPCSTR(wParam));
 		break;
 	case WM_DROPFILES:
 		dropfile((HDROP)wParam);
@@ -109,7 +110,7 @@ INT_PTR main_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam))
 		{
 		case IDC_BUTTON1:
-			io_main();
+			prepare();
 			break;
 		case IDC_BUTTON2:
 			choose_open_file();
@@ -145,30 +146,6 @@ INT_PTR main_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	return 0;
-}
-
-// uint8_t to hex
-uint8_t* main_dialog::convert_4_8(const uint8_t *input, uint32_t length)
-{
-	uint8_t *hex = new uint8_t[length * 2 + 1];
-	hex[length * 2] = '\0';
-	for (uint32_t i = 0, j = 0; j < length; i += 2, j++)
-	{
-		hex[i] = input[j] >> 4;
-		hex[i + 1] = input[j] & 0xf;
-	}
-	for (uint32_t i = 0; i < length * 2; i++)
-	{
-		if (hex[i] < 0xA)
-		{
-			hex[i] += 0x30;
-		}
-		else
-		{
-			hex[i] += 0x37;
-		}
-	}
-	return hex;
 }
 
 uint8_t* main_dialog::precheck_hex_input(uint8_t *input, uint32_t length)
@@ -284,7 +261,7 @@ void main_dialog::choose_save_file()
 	}
 }
 
-int main_dialog::dropfile(HDROP hDrop)
+int32_t main_dialog::dropfile(HDROP hDrop)
 {
 	HWND h;
 	HWND h1;
@@ -312,7 +289,6 @@ int main_dialog::dropfile(HDROP hDrop)
 	h1 = GetDlgItem(hDlg, IDC_STATIC3);
 	if (h == h1)
 	{
-
 		HANDLE oFile = CreateFileW(FilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
 			FILE_ATTRIBUTE_NORMAL, NULL);
 		if (oFile != INVALID_HANDLE_VALUE) //file exists
@@ -331,276 +307,18 @@ int main_dialog::dropfile(HDROP hDrop)
 		DragFinish(hDrop);
 		return 0;
 	}
-
 	DragFinish(hDrop);
 	return -1;
 }
 
-bool main_dialog::check_file(bool hash, file_context *f_ctx)
+// display output of process_text
+void main_dialog::display(LPCSTR hex)
 {
-	if (f_ctx->is_file)
-	{
-		if (f_ctx->iFilePath[0] != '\0')
-		{
-			// open input file
-			f_ctx->iFile = CreateFile(f_ctx->iFilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
-				FILE_ATTRIBUTE_NORMAL, NULL);
-
-			/*
-			   hash algorithm's output is shown on main_dialog
-			   so it does not need to output to file
-			*/
-			if (!hash)
-			{
-				if (f_ctx->oFilePath[0] != '\0')
-				{
-					// create output file
-					f_ctx->oFile = CreateFile(f_ctx->oFilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
-						FILE_ATTRIBUTE_NORMAL, NULL);
-				}
-				else
-				{
-					MessageBoxW(NULL, L"no save path", L"error", MB_OK);
-					CloseHandle(f_ctx->oFile);
-					return false;
-				}
-			}
-		}
-		else
-		{
-			MessageBoxW(NULL, L"no input file", L"error", MB_OK);
-			return false;
-		}
-
-		if (f_ctx->iFile == INVALID_HANDLE_VALUE)
-		{
-			MessageBoxW(NULL, L"fail to open file", L"error", MB_OK);
-			CloseHandle(f_ctx->iFile);
-			if (f_ctx->oFile == INVALID_HANDLE_VALUE && !hash)
-			{
-				MessageBoxW(NULL, L"fail to create file", L"error", MB_OK);
-				CloseHandle(f_ctx->oFile);
-			}
-			return false;
-		}
-	}
-	return true;
+	SetDlgItemTextA(hDlg, IDC_EDIT3, hex);
+	delete[]hex;
 }
 
-int32_t main_dialog::process_file(crypto *c, file_context *f_ctx, DWORD ui_tid)
-{
-	int32_t status = 0;
-
-	DWORD size_high;
-	DWORD size_low = GetFileSize(f_ctx->iFile, &size_high);
-
-	// set number of bits of input, used for padding
-	c->set_input_size((uint32_t)size_high, (uint32_t)size_low);
-
-	// file size
-	pd_size *total = new pd_size;
-	total->size_high = (uint32_t)size_high;
-	total->size_low = (uint32_t)size_low;
-	PostThreadMessage(ui_tid, WM_SETSIZE, WPARAM(total), LPARAM(0));
-
-	// processed file size
-	pd_size *processed = new pd_size;
-	processed->size_high = 0;
-	processed->size_low = 0;
-
-	//buffer 2M, should be multiple of block size
-	DWORD chunk_size = 0x200000;
-	uint8_t *buffer = new uint8_t[chunk_size];
-
-	/*
-	   result of one update
-	   unused if it's hash algorithm
-	*/
-	uint8_t *output = new uint8_t[chunk_size];
-
-	// end of file
-	bool eof;
-
-	// (oFile != NULL) means (!hash && file)
-	bool write = f_ctx->oFile != NULL;
-
-	// output_size of one chunk
-	uint32_t output_size;
-
-	// time
-	DWORD time;
-
-	DWORD read, written;
-	while (true)
-	{
-		// timeGetTime is preciser than GetTickCount
-		time = timeGetTime();
-
-		// read chunk_size bytes
-		ReadFile(f_ctx->iFile, buffer, chunk_size, &read, NULL);
-
-		eof = false;
-		if (0xffffffffU - processed->size_low >= read)
-			processed->size_low += read;
-		else
-		{
-			processed->size_low += read;
-			processed->size_high++;
-		}
-		// reach end of file
-		if (processed->size_high == total->size_high && processed->size_low == total->size_low)
-			eof = true;
-
-		// run algorithm
-		status = c->update(output, buffer, read, &output_size, eof);
-		if (status < 0)
-			break;
-
-		if (write)
-			WriteFile(f_ctx->oFile, output, output_size, &written, NULL);
-
-		// assume read <= 0xffffffffU
-		time = timeGetTime() - time;
-		PostThreadMessage(ui_tid, WM_UPDATEPB, WPARAM(read), LPARAM(time));
-
-		if (eof)
-			break;
-	}
-	delete[]output;
-	delete[]buffer;
-	CloseHandle(f_ctx->iFile);
-	CloseHandle(f_ctx->oFile);
-	return status;
-}
-
-int32_t main_dialog::process_text(crypto *c, uint8_t *output, uint32_t *output_size)
-{
-	int32_t status;
-	uint32_t length;
-	LPSTR input = new char[1024];
-	memset(input, 0, sizeof(char) * 1024);
-
-	// assume length of input is not very long
-	length = GetDlgItemTextA(hDlg, IDC_EDIT2, input, 1024);
-	c->set_input_size(0, length);
-
-	// length < 4M, so it's the last chunk
-	status = c->update((uint8_t*)output, (uint8_t*)input, length, output_size, true);
-
-	delete[]input;
-	return status;
-}
-
-/*
-   c : crypto_context
-   output : output from process_text
-   ui_tid : id of ui thread
-*/
-void main_dialog::display(crypto *c, uint8_t *output, uint32_t output_size, DWORD ui_tid, bool is_hash, bool is_file)
-{
-	uint8_t *hex = NULL;
-
-	if (!is_file)
-	{
-		// hash algorithm has method "encode" to produce hex string from state
-		if (is_hash)
-		{
-			hex = c->encode();
-			SetDlgItemTextA(hDlg, IDC_EDIT3, LPCSTR(hex));
-			delete[]hex;
-		}
-
-		// output is not NULL
-		else
-		{
-			hex = convert_4_8(output, output_size);
-			SetDlgItemTextA(hDlg, IDC_EDIT3, LPCSTR(hex));
-			delete[]hex;
-			delete[]output;
-		}
-	}
-	else
-	{
-		hex = c->encode();
-		PostThreadMessage(ui_tid, WM_FINISH, WPARAM(hex), LPARAM(0));
-	}
-}
-
-/* 
-    worker thread
-	read,process,and write 
-*/
-void main_dialog::run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid)
-{
-	int32_t status;
-
-	// output of block cipher from process_text()
-	uint8_t *output = NULL;
-
-	// open, create file
-	bool b = check_file(c_ctx->is_hash, f_ctx);
-	if (!b)
-	{
-		delete c_ctx;
-		delete f_ctx;
-		return;
-	}
-
-	// create algorithm object
-	crypto *c = CREATE_CRYPTO(c_ctx->algorithm);
-	if (c != NULL)
-	{
-		c->copy_context(c_ctx);
-
-		// set round key and initial vector
-		int32_t ret = c->init();
-		if (ret < 0)
-		{
-			CloseHandle(f_ctx->iFile);
-			CloseHandle(f_ctx->oFile);
-			if (ret == -1)
-			    MessageBoxW(NULL, L"wrong key length", L"error", MB_OK);
-			if (ret == -2)
-				MessageBoxW(NULL, L"wrong iv length", L"error", MB_OK);
-			return;
-		}
-
-		// result of process_text
-		LPSTR output = new char[1024 + 256];
-		memset(output, 0, sizeof(char) * (1024 + 256));
-		uint32_t output_size = 0;
-
-		if (f_ctx->is_file)
-			status = process_file(c, f_ctx, ui_tid);
-		else
-		{
-			// output may contain '\0', so i need to know output size
-			status = process_text(c, (uint8_t*)output, &output_size);
-		}
-
-		if (status == 0)
-		{
-			// display output in main_dialog or progress_dialog
-			display(c, (uint8_t*)output, output_size, ui_tid, c_ctx->is_hash, f_ctx->is_file);
-		}
-		else
-		{
-			MessageBoxW(NULL, L"error", L"?", MB_OK);
-		}
-
-		delete c_ctx;
-		delete f_ctx;
-		delete c;
-	}
-	else
-	{
-		MessageBoxW(NULL, L"NO IMPLEMENTATION", L"?_?", MB_OK);
-		delete c_ctx;
-		delete f_ctx;
-	}
-}
-
-void main_dialog::io_main()
+void main_dialog::prepare()
 {
 	// prepare crypto_context
 	int tab_id = TabCtrl_GetCurSel(GetDlgItem(hDlg, IDC_TAB1));
@@ -634,7 +352,7 @@ void main_dialog::io_main()
 		delete[]hex_key;
 		delete[]hex_iv;
 
-		// conversion failed
+		// precheck failed
 		if (ret < 0)
 		{
 			delete c_ctx;
@@ -658,25 +376,13 @@ void main_dialog::io_main()
 		GetDlgItemTextW(hDlg, IDC_STATIC3, f_ctx->oFilePath, MAX_PATH);
 	}
 
-	// if input is file, create progress dialog
-	DWORD ui_tid = 0;
+	pd_context *pd_ctx = NULL;
+	// if input is file, prepare pd_context
 	if (is_file)
-	{
-		//create thread start event
-		HANDLE hstart = CreateEvent(0, FALSE, FALSE, 0);
+		pd_ctx = new pd_context(c_ctx->algorithm, c_ctx->key_length, c_ctx->mode, c_ctx->is_enc, f_ctx->iFilePath);
 
-		progress_dialog *pd = new progress_dialog();
-		std::thread t_ui(&progress_dialog::start, pd, (HWND)NULL, hstart);
-		ui_tid = GetThreadId(t_ui.native_handle());
-		WaitForSingleObject(hstart, INFINITE);
-		t_ui.detach();
-
-		// prepare pd_context
-		pd_context *pd_ctx = new pd_context(c_ctx->algorithm, c_ctx->key_length, c_ctx->mode, c_ctx->is_enc, f_ctx->iFilePath);
-		PostThreadMessage(ui_tid, WM_SETDLG, WPARAM(pd_ctx), LPARAM(0));
-	}
-
-	std::thread t_worker(t_run, c_ctx, f_ctx, ui_tid);
-	t_worker.detach();
+	// start
+	process *pc = new process();
+	pc->start(c_ctx, f_ctx, pd_ctx, m_tid);
 }
 

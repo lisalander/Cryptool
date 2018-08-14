@@ -25,10 +25,7 @@ typedef struct crypto_context
 	uint8_t *user_key = NULL;
 	uint32_t key_length;
 
-	/* 
-	   initial vector, it will be copied to subclass because type might be diffrent:
-	   aes : uint8_t*, des : uint32_t
-	*/
+	// input initial vector and its length
 	uint8_t *iv = NULL;
 	uint32_t iv_length;
 

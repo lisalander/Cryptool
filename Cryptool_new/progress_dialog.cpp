@@ -21,6 +21,7 @@ pd_context::pd_context(std::wstring name, uint32_t key_length, int32_t nmode, bo
 		{
 			algorithm = name + L"_" + mode + L" " + (is_enc ? L"ENCRYPT" : L"DECRYPT");
 		}
+		is_hash = false;
 	}
 	else
 	{
@@ -41,8 +42,6 @@ progress_dialog::progress_dialog()
 
 void progress_dialog::start(HWND parent, HANDLE hstart)
 {
-	self = this;
-
 	// create progress_dialog
 	hDlg = CreateDialogParamW(hInst, MAKEINTRESOURCE(IDD_PROGRESS), parent, StaticDialogProc, (LPARAM)this);
 
@@ -54,7 +53,7 @@ void progress_dialog::start(HWND parent, HANDLE hstart)
 
 	dlgmsgloop();
 
-	delete self;
+	delete this;
 }
 
 void progress_dialog::init()
@@ -79,7 +78,7 @@ INT_PTR progress_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 		set_dlg((pd_context*)wParam);
 		break;
 	case WM_SETSIZE:
-		set_size((pd_size*)wParam);
+		set_size((uint32_t)wParam, (uint32_t)lParam);
 		break;
 	case WM_UPDATEPB:
 		update_progress((DWORD)wParam, (DWORD)lParam);
@@ -93,14 +92,14 @@ INT_PTR progress_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void progress_dialog::update_progress(DWORD read, DWORD time)
 {
-	time_total += time;
+	time_total += (uint64_t)time;
 
-	// accumulate processed size and time
+	// accumulate processed size(Byte) and time(microsecond)
 	ac_size += (uint64_t)read;
-	ac_time += time;
+	ac_time += (uint64_t)time;
 
-	// show speed about every 750ms
-	if (ac_time > 750)
+	// show speed about every 1 second
+	if (ac_time > 1000000)
 	{
 		show_speed(ac_size, ac_time);
 	}
@@ -130,9 +129,9 @@ void progress_dialog::set_dlg(pd_context *pd_ctx)
 	delete pd_ctx;
 }
 
-void progress_dialog::set_size(pd_size *size)
+void progress_dialog::set_size(uint32_t high, uint32_t low)
 {
-	size_total = (uint64_t)size->size_high << 32 | (uint64_t)size->size_low;
+	size_total = (uint64_t)high << 32 | (uint64_t)low;
 
 	// size_total to string
 	std::wstring integer;
@@ -158,10 +157,10 @@ void progress_dialog::set_size(pd_size *size)
 	SetDlgItemTextW(hDlg, IDC_STATIC9, size_string.c_str());
 }
 
-// calculate speed = size / time
-void progress_dialog::show_speed(uint64_t size, DWORD time)
+// calculate speed = size(Byte) / time(microsecond)
+void progress_dialog::show_speed(uint64_t size, uint64_t time)
 {
-	double speed = (double)(size) * 1000 / double(time);
+	double speed = (double)(size) * 1000000 / (double)time;
 	std::wstring speed_s;
 	int32_t pos;
 	if (speed >= (double)0x100000)
@@ -208,6 +207,4 @@ void progress_dialog::finish(uint8_t *hex)
 		SetDlgItemTextA(hDlg, IDC_EDIT1, LPCSTR(hex));
 		delete[]hex;
 	}
-
-
 }

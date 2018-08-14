@@ -7,11 +7,10 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	LPTSTR    lpCmdLine,
 	int       nCmdShow)
 {
-	//main_dialog *d = new main_dialog();
-	main_dialog d;
-	std::thread t(&main_dialog::start, d, (HWND)NULL);
+	main_dialog *md = new main_dialog();
+	std::thread t(&main_dialog::start, md, (HWND)NULL);
 	t.join();
 
-	//delete d;
+	delete md;
 	return 0;
 }

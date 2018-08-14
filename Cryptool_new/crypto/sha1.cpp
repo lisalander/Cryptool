@@ -53,8 +53,10 @@ uint8_t* sha1::encode()
 		output[i + 7] = input[j] & 0xF;
 	}
 
-	// now output is just number(0 ~ 15)
-	// turn it into character('0' ~ 'F')
+	/* 
+	   now output is just number(0 ~ 15)
+	   turn it into character('0' ~ 'F')
+	*/ 
 	for (uint32_t i = 0; i < length * 8; i++)
 	{
 		if (output[i] < 0xA)
@@ -183,6 +185,8 @@ void sha1::transform(const uint8_t input[])
 	state[2] += C;
 	state[3] += D;
 	state[4] += E;
+
+	A = B = C = D = E = 0;
 }
 
 int32_t sha1::update(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last)

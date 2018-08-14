@@ -7,13 +7,6 @@
 #define WM_UPDATEPB WM_USER+3
 #define WM_FINISH WM_USER+4
 
-// pd_size* as wParam passed to ui_thread
-typedef struct pd_size
-{
-	uint32_t size_high;
-	uint32_t size_low;
-}pd_size;
-
 // pd_context* as wParam passed to ui_thread
 typedef struct pd_context
 {
@@ -30,32 +23,28 @@ class progress_dialog : public dialog
 public:
 	progress_dialog();
 
-	virtual void init();
-
 	// create dialog, run message loop
 	void start(HWND parent, HANDLE hstart);
 
 	HINSTANCE hInst;
 private:
-	progress_dialog *self;
-
 	// input size
 	uint64_t size_total;
 
 	// processed input size
 	uint64_t size_processed;
 
-	DWORD time_total;
+	uint64_t time_total;
 
 	/* 
 	    accumulated processed size and time
 		used to calculate speed
 	*/
 	uint64_t ac_size;
-	DWORD ac_time;
+	uint64_t ac_time;
 
 	// calculate and show speed
-	void show_speed(uint64_t size, DWORD time);
+	void show_speed(uint64_t size, uint64_t time);
 
 	std::wstring algorithm;
 	std::wstring file_name;
@@ -66,11 +55,13 @@ private:
 	// 
 	double ratio_completed;
 
+	virtual void init();
+
 	virtual INT_PTR DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	void set_dlg(pd_context *pd_ctx);
 
-	void set_size(pd_size *size);
+	void set_size(uint32_t high, uint32_t low);
 
 	void update_progress(DWORD read, DWORD time);
 
