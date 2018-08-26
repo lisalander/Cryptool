@@ -41,15 +41,6 @@ int32_t md5::init()
 	return 0;
 }
 
-void md5::decode(uint32_t output[], const uint8_t input[])
-{
-	for (uint32_t i = 0, j = 0; j < 64; i++, j += 4)
-	{
-		//output[i] = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
-		output[i] = *(uint32_t*)(input + j);
-	}
-}
-
 uint8_t* md5::encode()
 {
 	uint32_t length = 4;
@@ -86,12 +77,21 @@ uint8_t* md5::encode()
 	return output;
 }
 
+void md5::decode(uint32_t output[], const uint8_t input[])
+{
+	for (uint32_t i = 0, j = 0; j < 64; i++, j += 4)
+	{
+		//output[i] = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
+		output[i] = *(uint32_t*)(input + j);
+	}
+}
+
 void md5::transform(const uint8_t input[])
 {
-	uint32_t A = state[0];
-	uint32_t B = state[1];
-	uint32_t C = state[2];
-	uint32_t D = state[3];
+	register uint32_t A = state[0];
+	register uint32_t B = state[1];
+	register uint32_t C = state[2];
+	register uint32_t D = state[3];
 	decode(X, input);
 
 	/* Round 1 */

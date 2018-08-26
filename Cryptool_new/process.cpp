@@ -50,8 +50,8 @@ bool process::check_file(bool hash, file_context *f_ctx)
 		if (f_ctx->iFilePath[0] != '\0')
 		{
 			// open input file
-			f_ctx->iFile = CreateFile(f_ctx->iFilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
-				FILE_ATTRIBUTE_NORMAL, NULL);
+			f_ctx->iFile = CreateFileW(f_ctx->iFilePath, GENERIC_READ, 0, NULL, OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL, NULL);// | FILE_FLAG_NO_BUFFERING
 
 			/*
 			hash algorithm's output is shown on dialog
@@ -62,7 +62,7 @@ bool process::check_file(bool hash, file_context *f_ctx)
 				if (f_ctx->oFilePath[0] != '\0')
 				{
 					// create output file
-					f_ctx->oFile = CreateFile(f_ctx->oFilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
+					f_ctx->oFile = CreateFileW(f_ctx->oFilePath, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
 						FILE_ATTRIBUTE_NORMAL, NULL);
 				}
 				else
@@ -99,20 +99,22 @@ int32_t process::process_file(crypto *c, file_context *f_ctx, DWORD ui_tid)
 {
 	int32_t status = 0;
 
-	DWORD size_high;
-	DWORD size_low = GetFileSize(f_ctx->iFile, &size_high);
+	// get file size
+	DWORD size_high, size_low;
+	size_low = GetFileSize(f_ctx->iFile, &size_high);
+	f_ctx->size = ((uint64_t)size_high) << 32 | (uint64_t)size_low;
 
 	// set number of bits of input, used for padding
 	c->set_input_size((uint32_t)size_high, (uint32_t)size_low);
 	PostThreadMessage(ui_tid, WM_SETSIZE, WPARAM(size_high), LPARAM(size_low));
 
 	// processed file size
-	uint32_t processed_size_high = 0;
-	uint32_t processed_size_low = 0;
+	uint64_t processed_size = 0;
 
 	//buffer 2M, should be multiple of block size
-	DWORD chunk_size = 0x200000;
+	DWORD chunk_size = 0x200000;//0x800000;
 	uint8_t *buffer = new uint8_t[chunk_size];
+	uint64_t chunk_size_64 = (uint64_t)chunk_size;
 
 	/*
 	result of one update
@@ -132,29 +134,23 @@ int32_t process::process_file(crypto *c, file_context *f_ctx, DWORD ui_tid)
 	// time
 	DWORD time;
 
-	DWORD read, written;
+	DWORD read = chunk_size, written;
 	while (true)
 	{
 		// resolution < 1us
 		QueryPerformanceCounter(begin);
 
+		eof = false;
+		if ((processed_size + chunk_size_64) >= f_ctx->size)
+		{
+			eof = true;
+		}
 		// read chunk_size bytes
 		ReadFile(f_ctx->iFile, buffer, chunk_size, &read, NULL);
 
-		eof = false;
-		if (0xffffffffU - processed_size_low >= read)
-			processed_size_low += read;
-		else
-		{
-			processed_size_low += read;
-			processed_size_high++;
-		}
-		// reach end of file
-		if (processed_size_high == size_high && processed_size_low == size_low)
-			eof = true;
-
 		// run algorithm
 		status = c->update(output, buffer, read, &output_size, eof);
+		//UnmapViewOfFile(buffer);
 		if (status < 0)
 			break;
 
@@ -168,6 +164,8 @@ int32_t process::process_file(crypto *c, file_context *f_ctx, DWORD ui_tid)
 
 		if (eof)
 			break;
+
+		processed_size += read;
 	}
 	delete[]output;
 	delete[]buffer;

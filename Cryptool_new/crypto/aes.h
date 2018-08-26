@@ -6,12 +6,7 @@ lisence
 
 */
 
-// 0xAABBCCDD -> 0xDDCCBBAA
-#define SWAP(x) (_lrotl(x, 8) & 0x00ff00ff | _lrotr(x, 8) & 0xff00ff00)
 
-#define GETU32(p) SWAP(*((uint32_t*)(p)))
-
-#define PUTU32(ct, st) { *((uint32_t *)(ct)) = SWAP((st)); }
 
 class aes : public crypto
 {

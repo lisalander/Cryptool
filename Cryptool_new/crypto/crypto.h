@@ -82,7 +82,7 @@ class crypto_factory
 {
 public:
 	// map name to algorithm
-	typedef std::map<std::wstring, typename crypto_factory_impl_base*> FactoryImplMap;
+	typedef std::map<std::wstring, crypto_factory_impl_base*> FactoryImplMap;
 
 	static crypto_factory &instance()
 	{
@@ -136,7 +136,7 @@ public:
    REGISTER_CRYPTO(name)
    name is name of algorithm class, it's lower case
 */
-#define REGISTER_CRYPTO(name) static crypto_factory_impl<name> crypto_factory_##name(L#name);
+#define REGISTER_CRYPTO(name) static crypto_factory_impl<name> crypto_factory_##name(L###name);
 
 /*
    create algorithm object:

@@ -1,5 +1,9 @@
 #include "sha1.h"
 
+#define SWAP(x) (_rotl(x, 8) & 0x00ff00ff | _rotr(x, 8) & 0xff00ff00)
+
+#define GETU32(p) SWAP(*((uint32_t*)(p)))
+
 #define rol(a, n) ((a << n) | (a >> (32-n)))
 
 #define R0(a,b,c,d,e,s){ \
@@ -76,6 +80,7 @@ void sha1::decode(uint32_t output[], const uint8_t input[])
 	for (uint32_t i = 0, j = 0; j < 64; i++, j += 4)
 	{
 		output[i] = input[j] << 24 | input[j + 1] << 16 | input[j + 2] << 8 | input[j + 3];
+		//output[i] = GETU32(input + j);
 	}
 	for (uint32_t i = 16; i < 80; i++)
 	{
@@ -85,11 +90,11 @@ void sha1::decode(uint32_t output[], const uint8_t input[])
 
 void sha1::transform(const uint8_t input[])
 {
-	uint32_t A = state[0];
-	uint32_t B = state[1];
-	uint32_t C = state[2];
-	uint32_t D = state[3];
-	uint32_t E = state[4];
+	register uint32_t A = state[0];
+	register uint32_t B = state[1];
+	register uint32_t C = state[2];
+	register uint32_t D = state[3];
+	register uint32_t E = state[4];
 	decode(X, input);
 
 	/* Round 1 */

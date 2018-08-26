@@ -13,6 +13,7 @@ typedef struct file_context
 	wchar_t oFilePath[MAX_PATH];
 	HANDLE iFile = NULL;
 	HANDLE oFile = NULL;
+	uint64_t size;
 	bool is_file;
 }file_context;
 

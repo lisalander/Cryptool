@@ -53,6 +53,7 @@ void main_dialog::set_widget_value()
 	algorithms.emplace_back(std::make_pair(L"SM3", true));
 	algorithms.emplace_back(std::make_pair(L"DES", false));
 	algorithms.emplace_back(std::make_pair(L"AES", false));
+	algorithms.emplace_back(std::make_pair(L"RSA", false));
 
 	filefilters.emplace_back(L"all(*.*)\0*.*\0\0");
 }
@@ -357,9 +358,9 @@ void main_dialog::prepare()
 		{
 			delete c_ctx;
 			if (ret == -1)
-			    MessageBox(NULL, L"input key is wrong", L"error", MB_OK);
+			    MessageBox(NULL, L"key is wrong", L"error", MB_OK);
 			if (ret == -2)
-				MessageBox(NULL, L"input initial vector is wrong", L"error", MB_OK);
+				MessageBox(NULL, L"initial vector is wrong", L"error", MB_OK);
 			return;
 		}
 	}
