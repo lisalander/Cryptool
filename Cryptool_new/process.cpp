@@ -150,7 +150,6 @@ int32_t process::process_file(crypto *c, file_context *f_ctx, DWORD ui_tid)
 
 		// run algorithm
 		status = c->update(output, buffer, read, &output_size, eof);
-		//UnmapViewOfFile(buffer);
 		if (status < 0)
 			break;
 

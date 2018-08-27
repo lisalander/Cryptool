@@ -384,6 +384,7 @@ void main_dialog::prepare()
 
 	// start
 	process *pc = new process();
+	pc->hDlg = hDlg;
 	pc->start(c_ctx, f_ctx, pd_ctx, m_tid);
 }
 

@@ -22,10 +22,9 @@ class process
 public:
 	process();
 	~process();
+	HWND hDlg;
 	void start(crypto_context *c_ctx, file_context *f_ctx, pd_context *pd_ctx, DWORD m_tid);
 private:
-	HWND hDlg;
-
 	// acquire high-resolution time stamps
 	LARGE_INTEGER *freq;
 	LARGE_INTEGER *begin;

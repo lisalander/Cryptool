@@ -3,6 +3,7 @@
 #include "crypto.h"
 #include "md5.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "aes.h"
 
 crypto* crypto_factory::create(const std::wstring& name)
@@ -45,6 +46,7 @@ void crypto::copy_context(const crypto_context *ctx)
 
 REGISTER_CRYPTO(md5);
 REGISTER_CRYPTO(sha1);
+REGISTER_CRYPTO(sha256);
 REGISTER_CRYPTO(aes);
 
 
