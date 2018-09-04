@@ -228,8 +228,8 @@ void process::run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid, DWOR
 		}
 
 		// result of process_text
-		uint8_t *output = new uint8_t[1024 + 256];
-		memset(output, 0, sizeof(uint8_t) * (1024 + 256));
+		uint8_t *output = new uint8_t[2048];
+		memset(output, 0, sizeof(uint8_t) * 2048);
 		uint32_t output_size = 0;
 
 		if (f_ctx->is_file)

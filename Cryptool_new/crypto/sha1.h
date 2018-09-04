@@ -10,7 +10,7 @@ public:
 	// init state
 	virtual int32_t init();
 
-	// state(little endian) to hex string
+	// state(big endian) to hex string
 	virtual uint8_t* encode();
 
 	virtual int32_t update(uint8_t *output, const uint8_t *input, uint32_t length, uint32_t *output_size, bool last);
