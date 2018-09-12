@@ -43,7 +43,7 @@ uint8_t* process::convert_4_8(const uint8_t *input, uint32_t length)
 	return hex;
 }
 
-bool process::check_file(bool hash, file_context *f_ctx)
+bool process::check_file(int type, file_context *f_ctx)
 {
 	if (f_ctx->is_file)
 	{
@@ -54,10 +54,10 @@ bool process::check_file(bool hash, file_context *f_ctx)
 				FILE_ATTRIBUTE_NORMAL, NULL);// | FILE_FLAG_NO_BUFFERING
 
 			/*
-			hash algorithm's output is shown on dialog
-			it does not need to output to file
+			  hash algorithm's output is shown on dialog
+			  it does not need to output to file
 			*/
-			if (!hash)
+			if (type != TYPE_HASH)
 			{
 				if (f_ctx->oFilePath[0] != '\0')
 				{
@@ -81,11 +81,11 @@ bool process::check_file(bool hash, file_context *f_ctx)
 
 		if (f_ctx->iFile == INVALID_HANDLE_VALUE)
 		{
-			MessageBoxW(NULL, L"fail to open file", L"error", MB_OK);
+			MessageBoxW(NULL, L"failed to open file", L"error", MB_OK);
 			CloseHandle(f_ctx->iFile);
-			if (f_ctx->oFile == INVALID_HANDLE_VALUE && !hash)
+			if (f_ctx->oFile == INVALID_HANDLE_VALUE && type != TYPE_HASH)
 			{
-				MessageBoxW(NULL, L"fail to create file", L"error", MB_OK);
+				MessageBoxW(NULL, L"failed to create file", L"error", MB_OK);
 				CloseHandle(f_ctx->oFile);
 			}
 			return false;
@@ -111,19 +111,24 @@ int32_t process::process_file(crypto *c, file_context *f_ctx, DWORD ui_tid)
 	// processed file size
 	uint64_t processed_size = 0;
 
-	//buffer 2M, should be multiple of block size
-	DWORD chunk_size = 0x200000;//0x800000;
+	//buffer 2M, should be multiple of block size :(
+	DWORD chunk_size = 0x200000;
 	uint8_t *buffer = new uint8_t[chunk_size];
 	uint64_t chunk_size_64 = (uint64_t)chunk_size;
+	if (buffer == NULL)
+		return -1;
 
 	/*
-	result of one update
-	unused if it's hash algorithm
+	  result of one update
+	  unused if it's hash algorithm
+	  chunk_size * 2 : base64 output_size > input_size
 	*/
-	uint8_t *output = new uint8_t[chunk_size];
+	uint8_t *output = new uint8_t[chunk_size * 2];
+	if (output == NULL)
+		return -1;
 
 	// output_size of one update
-	uint32_t output_size;
+	uint32_t output_size = 0;
 
 	// end of file
 	bool eof;
@@ -177,14 +182,14 @@ int32_t process::process_text(crypto *c, uint8_t *output, uint32_t *output_size)
 {
 	int32_t status;
 	uint32_t length;
-	LPSTR input = new char[1024];
-	memset(input, 0, sizeof(char) * 1024);
+	LPSTR input = new char[4096];
+	memset(input, 0, sizeof(char) * 4096);
 
 	// assume length of input is not very long
-	length = GetDlgItemTextA(hDlg, IDC_EDIT2, input, 1024);
+	length = GetDlgItemTextA(hDlg, IDC_EDIT2, input, 4096);
 	c->set_input_size(0, length);
 
-	// length < 4M, so it's the last chunk
+	//it's the last chunk
 	status = c->update((uint8_t*)output, (uint8_t*)input, length, output_size, true);
 
 	delete[]input;
@@ -200,7 +205,7 @@ void process::run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid, DWOR
 	uint8_t *output = NULL;
 
 	// open, create file
-	bool b = check_file(c_ctx->is_hash, f_ctx);
+	bool b = check_file(c_ctx->type, f_ctx);
 	if (!b)
 	{
 		delete c_ctx;
@@ -209,7 +214,7 @@ void process::run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid, DWOR
 	}
 
 	// create algorithm object
-	crypto *c = CREATE_CRYPTO(c_ctx->algorithm);
+	crypto *c = CREATE_CRYPTO(c_ctx->name);
 	if (c != NULL)
 	{
 		c->copy_context(c_ctx);
@@ -228,8 +233,8 @@ void process::run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid, DWOR
 		}
 
 		// result of process_text
-		uint8_t *output = new uint8_t[2048];
-		memset(output, 0, sizeof(uint8_t) * 2048);
+		uint8_t *output = new uint8_t[4096];
+		memset(output, 0, sizeof(uint8_t) * 4096);
 		uint32_t output_size = 0;
 
 		if (f_ctx->is_file)
@@ -242,16 +247,24 @@ void process::run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid, DWOR
 
 		if (status == 0)
 		{
-			uint8_t *hex;
-			// pass hex to main_dialog
-			if (c_ctx->is_hash)
-		    	hex = c->encode();
-			else
-				hex = convert_4_8(output, output_size);
+			uint8_t *hex = NULL;
+
+			switch (c_ctx->type)
+			{
+			case TYPE_HASH: hex = c->encode(); break;
+			case TYPE_SYMMETRIC: hex = convert_4_8(output, output_size); break;
+			case TYPE_BASE: 
+				hex = new uint8_t[output_size + 1];
+				memcpy(hex, output, sizeof(uint8_t)*output_size);
+				hex[output_size] = '\0';
+				break;
+			}
 
 			if (f_ctx->is_file)
+				// pass hex to progress_dialog
 				PostThreadMessageW(ui_tid, WM_FINISH, WPARAM(hex), LPARAM(0));
 			else
+				// pass hex to main_dialog
 			    PostThreadMessageW(m_tid, WM_FINISH, WPARAM(hex), LPARAM(0));
 		}
 		else

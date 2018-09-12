@@ -1,8 +1,10 @@
 #include "progress_dialog.h"
+#include "crypto\def.h"
 
-pd_context::pd_context(std::wstring name, uint32_t key_length, int32_t nmode, bool is_enc, std::wstring path)
+pd_context::pd_context(std::wstring name, uint32_t key_length, int nmode, int t, bool is_enc, std::wstring path)
 {
 	std::wstring mode = L"";
+	type = t;
 	if (nmode >= 0)
 	{
 		switch (nmode)
@@ -21,11 +23,9 @@ pd_context::pd_context(std::wstring name, uint32_t key_length, int32_t nmode, bo
 		{
 			algorithm = name + L"_" + mode + L" " + (is_enc ? L"ENCRYPT" : L"DECRYPT");
 		}
-		is_hash = false;
 	}
 	else
 	{
-		is_hash = true;
 		algorithm = name;
 	}
 	file_path = path;
@@ -122,7 +122,7 @@ void progress_dialog::set_dlg(pd_context *pd_ctx)
 	file_name = pd_ctx->file_path.substr(pos + 1);
 
 	// show hash?
-	show_result = pd_ctx->is_hash;
+	show_result = pd_ctx->type == TYPE_HASH;
 
 	SetDlgItemTextW(hDlg, IDC_STATIC7, algorithm.c_str());
 	SetDlgItemTextW(hDlg, IDC_STATIC8, file_name.c_str());

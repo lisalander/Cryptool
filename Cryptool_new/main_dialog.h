@@ -2,7 +2,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "crypto\crypto.h"
 #include "dialog.h"
 #include "process.h"
 
@@ -28,7 +27,7 @@ public:
 	void start(HWND parent);
 protected:
 	// (algorithm, is_hash)
-	std::vector<std::pair<std::wstring, bool>> algorithms;
+	std::vector<std::pair<std::wstring, int>> ciphers;
 
 	std::vector<std::wstring> filefilters;
 private:

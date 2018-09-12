@@ -2,15 +2,19 @@
 #include <ctype.h>
 #include <map>
 #include <algorithm>
+#include "def.h"
 
 typedef struct crypto_context
 {
 	// constructor
 	crypto_context() {}
-	crypto_context(std::wstring s, int32_t m, bool h, bool b);
+	crypto_context(std::wstring s, int mode, int type, bool is_enc);
 
-	// algorithm name
-	std::wstring algorithm;
+	// cipher name
+	std::wstring name;
+
+	// cipher type
+	int type;
 
 	/*
 	   mode 
@@ -19,7 +23,7 @@ typedef struct crypto_context
 	   2 : cfb
 	   3 : ofb
 	*/
-	int32_t mode;
+	int mode;
 
 	// input key and key length
 	uint8_t *user_key = NULL;
@@ -28,9 +32,6 @@ typedef struct crypto_context
 	// input initial vector and its length
 	uint8_t *iv = NULL;
 	uint32_t iv_length;
-
-	// hash or not
-	bool is_hash; 
 
 	// enc or dec
 	bool is_enc;
@@ -42,8 +43,8 @@ public:
 	crypto() {}
 	virtual ~crypto() {}
 
-	// algorithm name
-	std::wstring algorithm;
+	// cipher name
+	std::wstring name;
 
 	// input size is 64bit
 	void set_input_size(uint32_t high, uint32_t low);

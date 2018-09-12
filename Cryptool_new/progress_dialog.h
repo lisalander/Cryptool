@@ -11,11 +11,11 @@
 typedef struct pd_context
 {
 	pd_context() {}
-	pd_context(std::wstring name, uint32_t key_length, int32_t nmode, bool is_enc, std::wstring path);
+	pd_context(std::wstring name, uint32_t key_length, int nmode, int type, bool is_enc, std::wstring path);
 
 	std::wstring algorithm;
 	std::wstring file_path;
-	bool is_hash;
+	int type;
 }pd_context;
 
 class progress_dialog : public dialog

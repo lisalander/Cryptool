@@ -36,7 +36,7 @@ private:
 
 	int32_t process_file(crypto *c, file_context *f_ctx, DWORD ui_tid);
 
-	bool check_file(bool hash, file_context *f_ctx);
+	bool check_file(int type, file_context *f_ctx);
 
 	// ui_tid : progress_dialog's thread id
 	void run(crypto_context *c_ctx, file_context *f_ctx, DWORD ui_tid, DWORD m_tid);

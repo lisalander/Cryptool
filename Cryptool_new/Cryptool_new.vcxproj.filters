@@ -45,6 +45,9 @@
     <ClCompile Include="crypto\sha256.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="crypto\base64.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cryptool_new.h">
@@ -78,6 +81,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="crypto\sha256.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\base64.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\def.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

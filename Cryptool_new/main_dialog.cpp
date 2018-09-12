@@ -1,7 +1,7 @@
 #include "main_dialog.h"
 #include "progress_dialog.h"
 #include <thread>
-//#include <string.h>
+#include "crypto/crypto.h"
 
 main_dialog::main_dialog()
 {
@@ -23,6 +23,7 @@ void main_dialog::init()
 	fill_tab(htab);
 
 	// some initial state
+	SetDlgItemText(hDlg, IDC_STATIC1, ciphers[0].first.c_str());
 	// file
 	CheckRadioButton(hDlg, IDC_RADIO1, IDC_RADIO2, IDC_RADIO1); 
 	// encrypt
@@ -37,23 +38,23 @@ void main_dialog::fill_tab(HWND htab)
 {
 	TCITEMW ti;
 	ti.mask = TCIF_TEXT;
-	for (uint32_t i = 0; i < algorithms.size(); i++)
+	for (uint32_t i = 0; i < ciphers.size(); i++)
 	{
-		ti.pszText = (LPWSTR)algorithms[i].first.c_str();
+		ti.pszText = (LPWSTR)ciphers[i].first.c_str();
 		TabCtrl_InsertItem(htab, i, &ti);
 	}
 }
 
-// algorithm name should be upper case
+// algorithm name
 void main_dialog::set_widget_value()
 {
-	algorithms.emplace_back(std::make_pair(L"MD5", true));
-	algorithms.emplace_back(std::make_pair(L"SHA1", true));
-	algorithms.emplace_back(std::make_pair(L"SHA256", true));
-	algorithms.emplace_back(std::make_pair(L"SM3", true));
-	algorithms.emplace_back(std::make_pair(L"DES", false));
-	algorithms.emplace_back(std::make_pair(L"AES", false));
-	algorithms.emplace_back(std::make_pair(L"RSA", false));
+	ciphers.emplace_back(std::make_pair(L"Base64", TYPE_BASE));
+	ciphers.emplace_back(std::make_pair(L"MD5",    TYPE_HASH));
+	ciphers.emplace_back(std::make_pair(L"SHA1",   TYPE_HASH));
+	ciphers.emplace_back(std::make_pair(L"SHA256", TYPE_HASH));
+	ciphers.emplace_back(std::make_pair(L"SM3",    TYPE_HASH));
+	ciphers.emplace_back(std::make_pair(L"DES",    TYPE_SYMMETRIC));
+	ciphers.emplace_back(std::make_pair(L"AES",    TYPE_SYMMETRIC));
 
 	filefilters.emplace_back(L"all(*.*)\0*.*\0\0");
 }
@@ -103,7 +104,7 @@ INT_PTR main_dialog::DialogProc(UINT message, WPARAM wParam, LPARAM lParam)
 			if (((LPNMHDR)lParam)->code == TCN_SELCHANGE)
 			{
 				tab_id = TabCtrl_GetCurSel(GetDlgItem(hDlg, IDC_TAB1));
-				SetDlgItemTextW(hDlg, IDC_STATIC1, (LPWSTR)algorithms[tab_id].first.c_str());
+				SetDlgItemTextW(hDlg, IDC_STATIC1, (LPWSTR)ciphers[tab_id].first.c_str());
 			}
 		}
 		break;
@@ -323,8 +324,8 @@ void main_dialog::prepare()
 {
 	// prepare crypto_context
 	int tab_id = TabCtrl_GetCurSel(GetDlgItem(hDlg, IDC_TAB1));
-	std::wstring algorithm = algorithms[tab_id].first;
-	bool is_hash = algorithms[tab_id].second;
+	std::wstring name = ciphers[tab_id].first;
+	int type = ciphers[tab_id].second;
 	bool is_enc = IsDlgButtonChecked(hDlg, IDC_RADIO3) == BST_CHECKED;
 
 	int32_t mode;
@@ -336,9 +337,10 @@ void main_dialog::prepare()
 		mode = 2; //CFB
 	else
 		mode = 3; //OFB
-	crypto_context *c_ctx = new crypto_context(algorithm, mode, is_hash, is_enc);
+	crypto_context *c_ctx = new crypto_context(name, mode, type, is_enc);
 
-	if (!c_ctx->is_hash)
+	// no HMAC or ASYMMETRIC temporarily
+	if (c_ctx->type == TYPE_SYMMETRIC)
 	{
 		// read key, it's hex string
 		char *hex_key = new char[2048];
@@ -380,7 +382,7 @@ void main_dialog::prepare()
 	pd_context *pd_ctx = NULL;
 	// if input is file, prepare pd_context
 	if (is_file)
-		pd_ctx = new pd_context(c_ctx->algorithm, c_ctx->key_length, c_ctx->mode, c_ctx->is_enc, f_ctx->iFilePath);
+		pd_ctx = new pd_context(c_ctx->name, c_ctx->key_length, c_ctx->mode, c_ctx->type, c_ctx->is_enc, f_ctx->iFilePath);
 
 	// start
 	process *pc = new process();

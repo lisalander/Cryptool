@@ -1,6 +1,7 @@
 #include <thread>
 #include <mutex>
 #include "crypto.h"
+#include "base64.h"
 #include "md5.h"
 #include "sha1.h"
 #include "sha256.h"
@@ -8,20 +9,22 @@
 
 crypto* crypto_factory::create(const std::wstring& name)
 {
-	auto it = map.find(name);
+	std::wstring up = name;
+	std::transform(name.begin(), name.end(), up.begin(), ::toupper);
+	auto it = map.find(up);
 	if (it == map.end())
 		return NULL;
 	return it->second->create();
 }
 
-crypto_context::crypto_context(std::wstring name, int32_t m, bool h, bool b)
+crypto_context::crypto_context(std::wstring s, int m, int t, bool b)
 {
-	algorithm = name;
-	if (h)
+	name = s;
+	if (t != TYPE_SYMMETRIC)
 	    mode = -1;
 	else
 		mode = m;
-	is_hash = h;
+	type = t;
 	is_enc = b;
 }
 
@@ -33,10 +36,10 @@ void crypto::set_input_size(uint32_t high, uint32_t low)
 
 void crypto::copy_context(const crypto_context *ctx)
 {
-	algorithm = ctx->algorithm;
-	c_ctx.algorithm = ctx->algorithm;
+	name = ctx->name;
+	c_ctx.name = ctx->name;
 	c_ctx.is_enc = ctx->is_enc;
-	c_ctx.is_hash = ctx->is_hash;
+	c_ctx.type = ctx->type;
 	c_ctx.mode = ctx->mode;
 	c_ctx.key_length = ctx->key_length;
 	c_ctx.user_key = ctx->user_key;
@@ -44,6 +47,7 @@ void crypto::copy_context(const crypto_context *ctx)
 	c_ctx.iv = ctx->iv;
 }
 
+REGISTER_CRYPTO(base64);
 REGISTER_CRYPTO(md5);
 REGISTER_CRYPTO(sha1);
 REGISTER_CRYPTO(sha256);
